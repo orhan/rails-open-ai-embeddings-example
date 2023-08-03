@@ -46,3 +46,4 @@ yarn-debug.log*
 node_modules/*/**
 .yarn/*
 training_data/*
+.env
