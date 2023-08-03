@@ -10,4 +10,7 @@ Rails.application.routes.draw do
 
   # GET route to show the details of the existing book (if any)
   get '/train_ai', to: 'train_ai#show', as: 'show_train_ai'
+  
+  # Mount ActionCable server at "/cable"
+  mount ActionCable.server => '/cable'
 end

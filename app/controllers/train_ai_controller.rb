@@ -4,6 +4,9 @@ require 'dotenv'
 require 'ruby/openai'
 require 'csv'
 
+Dotenv.load()
+openai = OpenAI::Client.new(access_token: ENV['OPENAI_API_KEY'])
+
 class TrainAiController < ApplicationController
     def new
         @book = Book.new
@@ -33,17 +36,36 @@ class TrainAiController < ApplicationController
 
             reader = PDF::Reader.new(pdf_path)
             page_count = 0
+            
+            embeddings = []
 
             reader.pages.each do |page|
                 # Perform AI embeddings for the current page
-                # TODO Replace with embedding code
-                sleep(1)
-
+                response = openai.embeddings(
+                    parameters: {
+                        model: "text-search-curie-doc-001",
+                        input: text
+                    }
+                )
+                
                 # Increment the page count
                 page_count += 1
+                
+                # sleep(1)
+                # embedding = [123, 456, 789, 111, 222]
+                embedding = response['data'][0]['embedding']
+                embeddings << {page: "Page " + page_count.to_s, embedding: embedding}
+                
 
                 # Send the progress to the client
-                ActionCable.server.broadcast("ai_progress", page: page_count, total_pages: reader.page_count)
+                ActionCable.server.broadcast("ai_progress_channel", { page: page_count, total_pages: reader.page_count })
+            end
+            
+            CSV.open("embeddings.csv", "w") do |csv|
+                csv << [:title].concat((0..4095).to_a)
+                embeddings.each do |obj|
+                    csv << [obj[:page]].concat(obj[:embedding])
+                end
             end
 
             render json: { message: 'AI training completed!' }
@@ -57,45 +79,4 @@ class TrainAiController < ApplicationController
     def book_params
         params.require(:book).permit(:title, :author, :cover, :link)
     end
-    
-    # def load_my_book
-    #     path = Rails.root.join('app', 'assets', 'book.pdf')
-    #     reader = PDF::Reader.new(path)
-    #     @pdf_text = ""
-        
-    #     reader.pages.each do |page|
-    #         text_array << page.text
-    #     end
-        
-    #     text_array.each_with_index do |text, index|
-    #         # response = openai.embeddings(
-    #         #     parameters: {
-    #         #     model: "text-search-curie-doc-001",
-    #         #     input: text
-    #         #     }
-    #         # )
-            
-    #         # embedding = response['data'][0]['embedding']
-            
-    #         # embedding_hash = {embedding: embedding, text: text}
-    #         # embedding_array << embedding_hash
-            
-    #         sleep(2)
-            
-    #         broadcast_replace_to(
-    #             "progress",
-    #             target: "progress",
-    #             html: <<~HTML
-    #                 <p id="progress">Training page #{index + 1} of #{text_array.length}</p>
-    #           HTML
-    #           )
-    #     end
-          
-    #     CSV.open("embeddings.csv", "w") do |csv|
-    #         csv << [:embedding, :text]
-    #         embedding_array.each do |obj|
-    #             csv << [obj[:embedding], obj[:text]]
-    #         end
-    #     end
-    # end
 end

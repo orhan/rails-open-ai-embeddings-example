@@ -97,6 +97,7 @@ export const App = (props: AppProps) => {
   }, []);
 
   const [generatingEmbeddings, setGeneratingEmbeddings] = useState(false);
+  const [finishedTraining, setFinishedTraining] = useState(false);
   const onGenerateEmbeddingsClick = useCallback(() => {
     setGeneratingEmbeddings(true);
 
@@ -111,7 +112,7 @@ export const App = (props: AppProps) => {
     })
       .then((response) => {
         if (response.ok) {
-          console.log("DONE!");
+          setFinishedTraining(true);
         }
       })
       .catch((error) => {
@@ -119,26 +120,22 @@ export const App = (props: AppProps) => {
       });
   }, []);
 
-  const progressBar = useRef<HTMLDivElement>(null);
-  const progressLabel = useRef<HTMLDivElement>(null);
+  const [progress, setProgress] = useState({ page: 0, total: -1 });
   useEffect(() => {
-    const cable = createConsumer();
+    const cable = createConsumer("/cable");
     cable.subscriptions.create(
-      { channel: "AiProgressChannel", id: 1 },
+      { channel: "AiProgressChannel" },
       {
         received(data: { page: number; total_pages: number }) {
-          console.log("RECIEVED DATA: ", data);
-
           const { page, total_pages } = data;
-
-          if (progressBar.current && progressLabel.current) {
-            const progress = Math.round((page / total_pages) * 100);
-            progressBar.current.style.width = `${progress}%`;
-            progressLabel.current.innerText = `${progress}%`;
-          }
+          setProgress({ page: page, total: total_pages });
         },
       }
     );
+  }, []);
+
+  const onGoToAskPageClick = useCallback(() => {
+    window.location.href = "/";
   }, []);
 
   return (
@@ -240,17 +237,75 @@ export const App = (props: AppProps) => {
                     </span>
                   </a>
                 </p>
+
+                <div style={styles.warningBox}>
+                  <span
+                    style={{
+                      ...styles.label,
+                      textAlign: "center",
+                      marginBottom: 10,
+                    }}
+                  >
+                    Attention
+                  </span>
+                  <span style={styles.warning}>
+                    Make sure to place the PDF you want to train the AI on in
+                    the <span style={styles.code}>training_data/</span> folder
+                    as <span style={styles.code}>book.pdf</span> before
+                    continuing!
+                  </span>
+                </div>
               </div>
             </div>
 
             <div style={styles.bottomContainer}>
               {generatingEmbeddings ? (
-                <div id="progress-container" style={{ display: "none" }}>
-                  <div ref={progressBar} id="progress-bar"></div>
-                  <div ref={progressLabel} id="progress-label">
-                    0%
+                finishedTraining ? (
+                  <div style={styles.progressContainer}>
+                    <div style={styles.label}>
+                      Done, you can now starting asking question to your PDF! ✨
+                    </div>
+
+                    <Button
+                      style={{
+                        marginTop: 10,
+                        backgroundColor: "#000",
+                        color: "white",
+                      }}
+                      hoverStyle={{
+                        backgroundColor: "rgb(255, 144, 232)",
+                        color: "black",
+                      }}
+                      onClick={onGoToAskPageClick}
+                    >
+                      {"Ask my book now"}
+                    </Button>
                   </div>
-                </div>
+                ) : (
+                  <div style={styles.progressContainer}>
+                    <div style={styles.progressBar}>
+                      <div
+                        style={{
+                          ...styles.progress,
+                          width:
+                            Math.round((progress.page / progress.total) * 100) +
+                            "%",
+                        }}
+                      ></div>
+                    </div>
+
+                    <div style={{ ...styles.label, marginTop: 10 }}>
+                      {progress.total !== -1
+                        ? progress.total === progress.page
+                          ? "Finalizing things..."
+                          : "Training page " +
+                            progress.page +
+                            " of " +
+                            progress.total
+                        : "Starting AI training..."}
+                    </div>
+                  </div>
+                )
               ) : (
                 <>
                   <Button onClick={onShowNewFormClick}>
@@ -374,6 +429,28 @@ const styles: Record<string, CSSProperties> = {
     fontSize: 18,
   },
 
+  warningBox: {
+    alignSelf: "stretch",
+    marginRight: 20,
+    padding: 15,
+    border: "1px solid rgb(0, 0, 0)",
+    backgroundColor: "rgb(255, 144, 232)",
+  },
+
+  warning: {
+    fontSize: 16,
+    lineHeight: "24px",
+  },
+
+  code: {
+    fontFamily: "Roboto Slab",
+    paddingLeft: 4,
+    paddingRight: 4,
+    borderRadius: 2,
+    border: "1px solid rgba(0, 0, 0, 0.1)",
+    backgroundColor: "rgba(0, 0, 0, 0.1)",
+  },
+
   bottomContainer: {
     display: "flex",
     alignSelf: "stretch",
@@ -397,5 +474,26 @@ const styles: Record<string, CSSProperties> = {
   buttonHovered: {
     transform: "translate(-.25rem,-.25rem)",
     boxShadow: ".25rem .25rem 0 #000",
+  },
+
+  progressContainer: {
+    flex: 1,
+
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+  },
+
+  progressBar: {
+    width: 300,
+    height: 20,
+    border: "1px solid #000",
+    borderRadius: 4,
+  },
+
+  progress: {
+    width: "0%",
+    height: "100%",
+    backgroundColor: "#000",
   },
 };
