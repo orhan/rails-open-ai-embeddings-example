@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>AskMyBook - Rails - AI Trainer</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+
+    <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=REM:wght@300;500&family=Roboto+Slab&display=swap" rel="stylesheet">
+  </head>
+
+  <body>
+    <% if @book.persisted? %>
+      <%= content_tag :div,
+        id: "root",
+        'data-props': '{' +
+          '"book": ' + @book.to_json + ', ' +
+          '"authenticityToken": ' + form_authenticity_token.to_json + 
+        '}' do %>
+      <% end %>
+    <% else %>
+      <div id ="root" data-props="{}"></div>
+    <% end %>
+  </body>
+</html>

@@ -1,0 +1,2 @@
+module AskmybookHelper
+end
