@@ -8,18 +8,25 @@ import React, {
   useEffect,
 } from "react";
 import { createConsumer } from "@rails/actioncable";
+import { TrainAI } from "./train-ai";
 
 export interface AppProps {
+  screen: "train" | "ask";
   book?: {
     title: string;
     author: string;
     cover: string;
     link: string;
   };
+  redirect?: string;
+  answer?: {
+    question: string;
+    answer: string;
+  };
   authenticityToken?: string;
 }
 
-const Button: FC<{
+export const Button: FC<{
   children: ReactNode;
   style?: CSSProperties;
   hoverStyle?: CSSProperties;
@@ -49,92 +56,96 @@ const Button: FC<{
 };
 
 export const App = (props: AppProps) => {
-  const { book, authenticityToken } = props;
+  const { screen, book, redirect, answer, authenticityToken } = props;
 
-  const bookInfo = useRef(book);
+  if (redirect) {
+    window.location.replace(redirect);
+  }
 
-  const titleInputRef = useRef<HTMLInputElement>(null);
-  const authorInputRef = useRef<HTMLInputElement>(null);
-  const coverInputRef = useRef<HTMLInputElement>(null);
-  const linkInputRef = useRef<HTMLInputElement>(null);
+  if (screen === "train") {
+    return <TrainAI {...props} />;
+  }
 
-  const [nextButtonEnabled, setNextButtonEnabled] = useState(true);
-  const onNextButtonClick = useCallback(() => {
-    setNextButtonEnabled(false);
-
-    const newBook = {
-      title: titleInputRef.current?.value || "",
-      author: authorInputRef.current?.value || "",
-      cover: coverInputRef.current?.value || "",
-      link: linkInputRef.current?.value || "",
-    };
-
-    fetch("train_ai", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        book: newBook,
-        authenticity_token: authenticityToken,
-      }),
-    })
-      .then((response) => {
-        if (response.ok) {
-          bookInfo.current = newBook;
-          setNextButtonEnabled(true);
-          setShowNewBookForm(false);
-        }
-      })
-      .catch((error) => {
-        alert("Error training AI: " + error);
-      });
-  }, []);
-
-  const [showNewBookForm, setShowNewBookForm] = useState(book === undefined);
-  const onShowNewFormClick = useCallback(() => {
-    setShowNewBookForm(true);
-  }, []);
-
-  const [generatingEmbeddings, setGeneratingEmbeddings] = useState(false);
-  const [finishedTraining, setFinishedTraining] = useState(false);
-  const onGenerateEmbeddingsClick = useCallback(() => {
-    setGeneratingEmbeddings(true);
-
-    fetch("train_ai/start", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        authenticity_token: authenticityToken,
-      }),
-    })
-      .then((response) => {
-        if (response.ok) {
-          setFinishedTraining(true);
-        }
-      })
-      .catch((error) => {
-        alert("Error training AI: " + error);
-      });
-  }, []);
-
-  const [progress, setProgress] = useState({ page: 0, total: -1 });
+  const [answerPartial, setAnswerPartial] = useState("");
   useEffect(() => {
-    const cable = createConsumer("/cable");
-    cable.subscriptions.create(
-      { channel: "AiProgressChannel" },
-      {
-        received(data: { page: number; total_pages: number }) {
-          const { page, total_pages } = data;
-          setProgress({ page: page, total: total_pages });
-        },
+    if (!answer) {
+      return;
+    }
+
+    const answerText = answer.answer;
+    const answerTextLength = answerText.length;
+
+    let i = 0;
+    const interval = setInterval(() => {
+      setAnswerPartial(answerText.substring(0, i));
+      i++;
+
+      if (i > answerTextLength) {
+        clearInterval(interval);
       }
+    }, 25);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [answer]);
+
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const [askingQuestion, setAskingQuestion] = useState(false);
+  const askQuestion = (question: string) => {
+    setAskingQuestion(true);
+
+    fetch("/ask_question", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        authenticity_token: authenticityToken,
+        question,
+      }),
+    })
+      .then((responseData) => {
+        responseData.json().then((response) => {
+          if (response.redirect) {
+            setTimeout(() => {
+              window.location.href = response.redirect;
+              setAskingQuestion(false);
+            }, 100);
+          } else if (response.url) {
+            setTimeout(() => {
+              window.location.href = response.url;
+              setAskingQuestion(false);
+            }, 100);
+          }
+        });
+      })
+      .catch((error) => {
+        alert("Error asking question: " + error);
+        setAskingQuestion(false);
+      });
+  };
+
+  const onAskQuestionClick = useCallback(() => {
+    askQuestion(
+      inputRef.current?.value || "What is The Minimalist Entrepreneur about?"
     );
   }, []);
 
-  const onGoToAskPageClick = useCallback(() => {
+  const onRandomQuestionClick = useCallback(() => {
+    const questions = [
+      "What is a minimalist entrepreneur?",
+      "What is your definition of community?",
+      "How do I decide what kind of business I should start?",
+    ];
+
+    const randomQuestion =
+      questions[Math.floor(Math.random() * questions.length)];
+    askQuestion(randomQuestion);
+  }, []);
+
+  const onAskAnotherQuestionClick = useCallback(() => {
     window.location.href = "/";
   }, []);
 
@@ -143,191 +154,110 @@ export const App = (props: AppProps) => {
       <h1 style={styles.logo}>Ask my book</h1>
 
       <div style={styles.content}>
-        {showNewBookForm ? (
-          <>
-            <h2 style={styles.title}>
-              Which book should the AI be trained on?
-            </h2>
+        <div style={styles.table}>
+          <a href={book?.link} target="_blank">
+            <img style={styles.cover} src={book?.cover} />
+          </a>
 
-            <div style={styles.table}>
-              <div style={styles.inputs}>
-                <p>
-                  <span style={styles.label}>Title</span>
-                  <input
-                    ref={titleInputRef}
-                    style={styles.input}
-                    placeholder="Book title"
-                  />
-                </p>
+          <div style={styles.info}>
+            <p>
+              <span style={styles.label}>Title</span>
+              <a href={book?.link} target="_blank">
+                <span style={styles.value}>{book?.title}</span>
+              </a>
+            </p>
 
-                <p>
-                  <span style={styles.label}>Author</span>
-                  <input
-                    ref={authorInputRef}
-                    style={styles.input}
-                    placeholder="Author"
-                  />
-                </p>
-
-                <p>
-                  <span style={styles.label}>Cover image</span>
-                  <input
-                    ref={coverInputRef}
-                    style={styles.input}
-                    placeholder="Cover image URL"
-                  />
-                </p>
-
-                <p>
-                  <span style={styles.label}>Link to purchase</span>
-                  <input
-                    ref={linkInputRef}
-                    style={styles.input}
-                    placeholder="Amazon Link"
-                  />
-                </p>
-              </div>
-            </div>
-
-            <div style={styles.bottomContainer}>
-              <div style={{ flex: 1 }}></div>
-
-              <Button
-                style={{
-                  backgroundColor: "#000",
-                  color: "white",
-                  opacity: nextButtonEnabled ? 1 : 0.4,
-                  pointerEvents: nextButtonEnabled ? "all" : "none",
-                }}
-                hoverStyle={{
-                  backgroundColor: "rgb(255, 144, 232)",
-                  color: "black",
-                }}
-                onClick={onNextButtonClick}
-              >
-                {nextButtonEnabled ? "Next" : "Loading..."}
-              </Button>
-            </div>
-          </>
-        ) : (
-          <>
-            <h2 style={styles.title}>Train AI on this book?</h2>
-
-            <div style={styles.table}>
-              <img style={styles.cover} src={bookInfo.current?.cover} />
-
-              <div style={styles.info}>
-                <p>
-                  <span style={styles.label}>Title</span>
-                  <span style={styles.value}>{bookInfo.current?.title}</span>
-                </p>
-
-                <p>
-                  <span style={styles.label}>Author</span>
-                  <span style={{ ...styles.value, fontSize: 24 }}>
-                    {bookInfo.current?.author}
-                  </span>
-                </p>
-
-                <p>
-                  <span style={styles.label}>Link</span>
-                  <a href={bookInfo.current?.link} target="_blank">
-                    <span style={{ ...styles.value, fontSize: 16 }}>
-                      {bookInfo.current?.link}
-                    </span>
-                  </a>
-                </p>
-
-                <div style={styles.warningBox}>
-                  <span
-                    style={{
-                      ...styles.label,
-                      textAlign: "center",
-                      marginBottom: 10,
-                    }}
-                  >
-                    Attention
-                  </span>
-                  <span style={styles.warning}>
-                    Make sure to place the PDF you want to train the AI on in
-                    the <span style={styles.code}>training_data/</span> folder
-                    as <span style={styles.code}>book.pdf</span> before
-                    continuing!
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div style={styles.bottomContainer}>
-              {generatingEmbeddings ? (
-                finishedTraining ? (
-                  <div style={styles.progressContainer}>
-                    <div style={styles.label}>
-                      Done, you can now starting asking question to your PDF! ✨
-                    </div>
-
-                    <Button
-                      style={{
-                        marginTop: 10,
-                        backgroundColor: "#000",
-                        color: "white",
-                      }}
-                      hoverStyle={{
-                        backgroundColor: "rgb(255, 144, 232)",
-                        color: "black",
-                      }}
-                      onClick={onGoToAskPageClick}
-                    >
-                      {"Ask my book now"}
-                    </Button>
-                  </div>
-                ) : (
-                  <div style={styles.progressContainer}>
-                    <div style={styles.progressBar}>
-                      <div
-                        style={{
-                          ...styles.progress,
-                          width:
-                            Math.round((progress.page / progress.total) * 100) +
-                            "%",
-                        }}
-                      ></div>
-                    </div>
-
-                    <div style={{ ...styles.label, marginTop: 10 }}>
-                      {progress.total !== -1
-                        ? progress.total === progress.page
-                          ? "Finalizing things..."
-                          : "Training page " +
-                            progress.page +
-                            " of " +
-                            progress.total
-                        : "Starting AI training..."}
-                    </div>
-                  </div>
-                )
-              ) : (
-                <>
-                  <Button onClick={onShowNewFormClick}>
-                    {"Train on a different book"}
-                  </Button>
-
-                  <Button
-                    style={{ backgroundColor: "#000", color: "white" }}
-                    hoverStyle={{
-                      backgroundColor: "rgb(255, 144, 232)",
-                      color: "black",
-                    }}
-                    onClick={onGenerateEmbeddingsClick}
-                  >
-                    {"Start AI training"}
-                  </Button>
-                </>
-              )}
-            </div>
-          </>
-        )}
+            <p>
+              <span style={styles.label}>Author</span>
+              <span style={{ ...styles.value }}>{book?.author}</span>
+            </p>
+          </div>
+        </div>
       </div>
+
+      <h2 style={styles.title}>
+        This is an experiment in using AI to make a book's content more
+        accessible.
+        <br />
+        Ask a question and AI will answer it in real-time:
+      </h2>
+
+      {!answer ? (
+        <>
+          <textarea
+            ref={inputRef}
+            style={styles.input}
+            placeholder={"What is The Minimalist Entrepreneur about?"}
+            rows={3}
+            cols={100}
+          ></textarea>
+
+          <div style={styles.buttonContainer}>
+            <Button
+              style={{
+                backgroundColor: "#000",
+                color: "white",
+                opacity: !askingQuestion ? 1 : 0.4,
+                pointerEvents: !askingQuestion ? "all" : "none",
+              }}
+              hoverStyle={{
+                backgroundColor: "rgb(255, 144, 232)",
+                color: "black",
+              }}
+              onClick={onAskQuestionClick}
+            >
+              {askingQuestion ? "Asking ..." : "Ask question"}
+            </Button>
+
+            <Button
+              style={{
+                opacity: !askingQuestion ? 1 : 0.4,
+                pointerEvents: !askingQuestion ? "all" : "none",
+              }}
+              onClick={onRandomQuestionClick}
+            >
+              {"I'm feeling lucky"}
+            </Button>
+          </div>
+        </>
+      ) : (
+        <>
+          <div style={{ width: 600 }}>
+            <p style={{ ...styles.label, textAlign: "center" }}>Answer</p>
+
+            <div style={styles.answer}>
+              <div style={{ opacity: 0 }}>{answer.answer}d</div>
+              <div
+                style={{
+                  position: "absolute",
+                  left: 20,
+                  right: 20,
+                  top: 18,
+                  bottom: 20,
+                }}
+              >
+                {answerPartial}
+              </div>
+            </div>
+          </div>
+
+          <div style={styles.buttonContainer}>
+            <Button
+              style={{
+                backgroundColor: "#000",
+                color: "white",
+              }}
+              hoverStyle={{
+                backgroundColor: "rgb(255, 144, 232)",
+                color: "black",
+              }}
+              onClick={onAskAnotherQuestionClick}
+            >
+              {"Ask another question"}
+            </Button>
+          </div>
+        </>
+      )}
     </div>
   );
 };
@@ -355,11 +285,11 @@ const styles: Record<string, CSSProperties> = {
   content: {
     display: "flex",
     flexDirection: "column",
-    width: 800,
+    width: 600,
     justifyContent: "center",
     alignItems: "center",
 
-    marginBottom: 100,
+    marginTop: 10,
     borderRadius: 4,
     borderWidth: 1,
     borderStyle: "solid",
@@ -367,34 +297,34 @@ const styles: Record<string, CSSProperties> = {
   },
 
   title: {
-    width: 800,
+    width: 600,
     alignSelf: "center",
     fontSize: 16,
-    fontWeight: "bold",
-    textAlign: "center",
-    paddingTop: 5,
-    paddingBottom: 17,
-    marginBottom: 0,
-    borderBottom: "1px solid #000",
+    fontWeight: 300,
+    textAlign: "left",
+    marginTop: 100,
+    marginBottom: 20,
+    paddingLeft: 10,
+    paddingRight: 10,
+    boxSizing: "border-box",
   },
 
   cover: {
     margin: 20,
     width: "auto",
-    height: "auto",
+    height: 100,
   },
 
   table: {
     display: "flex",
     flexDirection: "row",
-    justifyContent: "center",
     alignSelf: "stretch",
     margin: 0,
-    borderBottom: "1px solid #000",
   },
 
   info: {
     paddingLeft: 20,
+    paddingRight: 20,
     paddingTop: 10,
     borderLeft: "1px solid #000",
   },
@@ -409,7 +339,7 @@ const styles: Record<string, CSSProperties> = {
   },
 
   label: {
-    fontSize: 12,
+    fontSize: 10,
     textTransform: "uppercase",
     display: "block",
   },
@@ -418,15 +348,20 @@ const styles: Record<string, CSSProperties> = {
     display: "block",
     marginBottom: 25,
     fontFamily: "Roboto Slab",
-    fontSize: 32,
+    fontSize: 16,
   },
 
   input: {
     display: "block",
-    marginTop: 5,
-    padding: 5,
+    width: 600,
+    padding: 15,
     fontFamily: "Roboto Slab",
     fontSize: 18,
+    borderRadius: 8,
+    resize: "none",
+    border: "1px solid #000",
+    backgroundColor: "#FFF",
+    boxSizing: "border-box",
   },
 
   warningBox: {
@@ -451,11 +386,29 @@ const styles: Record<string, CSSProperties> = {
     backgroundColor: "rgba(0, 0, 0, 0.1)",
   },
 
-  bottomContainer: {
+  answer: {
+    position: "relative",
+    width: 600,
+    paddingLeft: 20,
+    paddingRight: 20,
+    paddingTop: 18,
+    paddingBottom: 20,
+    borderRadius: 8,
+    fontFamily: "Roboto Slab",
+    fontSize: 18,
+    lineHeight: "28px",
+    color: "rgb(80, 80, 80)",
+    border: "1px solid #000",
+    backgroundColor: "#F5F5F5",
+    boxSizing: "border-box",
+  },
+
+  buttonContainer: {
+    width: 600,
     display: "flex",
-    alignSelf: "stretch",
+    alignSelf: "center",
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "center",
     padding: 30,
   },
 
@@ -464,6 +417,9 @@ const styles: Record<string, CSSProperties> = {
     paddingBottom: 10,
     paddingLeft: 15,
     paddingRight: 15,
+    marginLeft: 20,
+    marginRight: 20,
+    fontSize: 18,
     border: "solid 1px #000",
     borderRadius: "0.25rem",
     transition: "all 0.14s",
