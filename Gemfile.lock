@@ -210,6 +210,7 @@ GEM
       railties (>= 6.0.0)
     thor (1.2.2)
     timeout (0.4.0)
+    tokenizers (0.3.3-arm64-darwin)
     ttfunk (1.7.0)
     turbo-rails (1.4.0)
       actionpack (>= 6.0.0)
@@ -255,6 +256,7 @@ DEPENDENCIES
   sprockets-rails
   sqlite3 (~> 1.4)
   stimulus-rails
+  tokenizers (~> 0.3.3)
   turbo-rails
   tzinfo-data
   web-console

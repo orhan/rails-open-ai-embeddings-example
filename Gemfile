@@ -82,3 +82,5 @@ end
 gem "jsbundling-rails", "~> 1.1"
 
 gem "foreman", "~> 0.87.2"
+
+gem "tokenizers", "~> 0.3.3"

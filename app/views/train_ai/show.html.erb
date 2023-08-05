@@ -16,6 +16,7 @@
       <%= content_tag :div,
         id: "root",
         'data-props': '{' +
+          '"screen": "train",' +
           '"book": ' + @book.to_json + ', ' +
           '"authenticityToken": ' + form_authenticity_token.to_json + 
         '}' do %>
