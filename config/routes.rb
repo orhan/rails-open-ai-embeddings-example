@@ -1,4 +1,12 @@
 Rails.application.routes.draw do
+  root 'askmybook#index'
+  
+  # POST route to ask a question
+  post '/ask_question', to: 'askmybook#ask_question', as: 'ask_question'
+  
+  # GET route to show the answer
+  get '/answer/:id', to: 'askmybook#answer', as: 'answer'
+  
   # GET route to show the form for creating a new book
   get '/train_ai/new', to: 'train_ai#new', as: 'new_train_ai'
 
