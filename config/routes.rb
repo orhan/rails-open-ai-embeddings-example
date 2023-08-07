@@ -1,6 +1,9 @@
 Rails.application.routes.draw do
   root 'askmybook#index'
   
+  # GET route to show the form for asking a question
+  get 'askmybook/start', to: 'askmybook#start', as: 'start'
+  
   # POST route to ask a question
   post '/ask_question', to: 'askmybook#ask_question', as: 'ask_question'
   

@@ -11,6 +11,16 @@ SEPARATOR_LENGTH = 3
 class AskmybookController < ApplicationController
     def index
         @book = Book.first
+        
+        if @book.present? && File.exist?('book_embeddings.csv')
+            render 'start'
+        else
+            redirect_to '/train_ai'
+        end
+    end
+    
+    def start
+        @book = Book.first
     end
     
     def ask_question
