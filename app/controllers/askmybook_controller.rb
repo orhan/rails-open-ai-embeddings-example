@@ -28,7 +28,7 @@ class AskmybookController < ApplicationController
         @question = Question.find_by question: params[:question]
         
         if @question.present?
-            render json: { redirect: '/answer/' + @question.id.to_s }, status: :ok
+            render json: { status: "SUCCESS", redirect: '/answer/' + @question.id.to_s }, status: :ok
             return
         else
             @question = Question.new()
@@ -120,7 +120,7 @@ class AskmybookController < ApplicationController
             @question.answer = answer
             
             if @question.save
-                render json: {status: 'SUCCESS', message: 'Saved answer', data: @question, url: '/answer/' + @question.id.to_s}, status: :ok
+                render json: {status: 'SUCCESS', message: 'Saved answer', data: @question, redirect: '/answer/' + @question.id.to_s}, status: :ok
             else
                 render json: {status: 'ERROR', message: 'Answer not saved', data: @question.errors}, status: :unprocessable_entity
             end

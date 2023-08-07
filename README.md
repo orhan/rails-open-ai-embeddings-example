@@ -44,7 +44,7 @@ bundle install
    1. Start the server by running:
 
    ```bash
-   foreman start
+   foreman start -f Procfile.dev
    ```
 
    2. If you want to use your own book/PDF:

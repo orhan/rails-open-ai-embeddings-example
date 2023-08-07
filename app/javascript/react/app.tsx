@@ -7,7 +7,6 @@ import React, {
   useRef,
   useEffect,
 } from "react";
-import { createConsumer } from "@rails/actioncable";
 import { TrainAI } from "./train-ai";
 
 export interface AppProps {
@@ -108,20 +107,17 @@ export const App = (props: AppProps) => {
     })
       .then((responseData) => {
         responseData.json().then((response) => {
-          if (response.ok) {
-            if (response.redirect) {
-              setTimeout(() => {
-                window.location.href = response.redirect;
-                setAskingQuestion(false);
-              }, 100);
-            } else if (response.url) {
-              setTimeout(() => {
-                window.location.href = response.url;
-                setAskingQuestion(false);
-              }, 100);
-            }
+          if (response.status === "SUCCESS" && response.redirect) {
+            setTimeout(() => {
+              window.location.href = response.redirect;
+              setAskingQuestion(false);
+            }, 100);
           } else {
-            alert("Error asking question: " + response.statusText);
+            if (response.data) {
+              alert("Error asking question: " + JSON.stringify(response.data));
+            } else {
+              alert("Error asking question: " + response.statusText);
+            }
             setAskingQuestion(false);
           }
         });
@@ -228,17 +224,21 @@ export const App = (props: AppProps) => {
       ) : (
         <>
           <div style={{ width: 600 }}>
-            <p style={{ ...styles.label, textAlign: "center" }}>Answer</p>
+            <p style={{ ...styles.label }}>Question</p>
+
+            <div style={styles.question}>{answer.question}</div>
+          </div>
+
+          <div style={{ width: 600 }}>
+            <p style={{ ...styles.label }}>Answer</p>
 
             <div style={styles.answer}>
-              <div style={{ opacity: 0 }}>{answer.answer}d</div>
+              <div style={{ opacity: 0 }}>{answer.answer}</div>
               <div
                 style={{
                   position: "absolute",
-                  left: 20,
-                  right: 20,
-                  top: 18,
-                  bottom: 20,
+                  top: 0,
+                  left: 0,
                 }}
               >
                 {answerPartial}
@@ -307,8 +307,8 @@ const styles: Record<string, CSSProperties> = {
     fontSize: 16,
     fontWeight: 300,
     textAlign: "left",
-    marginTop: 100,
-    marginBottom: 20,
+    marginTop: 30,
+    marginBottom: 60,
     paddingLeft: 10,
     paddingRight: 10,
     boxSizing: "border-box",
@@ -391,20 +391,23 @@ const styles: Record<string, CSSProperties> = {
     backgroundColor: "rgba(0, 0, 0, 0.1)",
   },
 
+  question: {
+    width: 600,
+    fontSize: 18,
+    lineHeight: "24px",
+    color: "rgb(135, 135, 135)",
+    marginTop: 10,
+    marginBottom: 20,
+  },
+
   answer: {
     position: "relative",
     width: 600,
-    paddingLeft: 20,
-    paddingRight: 20,
-    paddingTop: 18,
-    paddingBottom: 20,
-    borderRadius: 8,
+    marginBottom: 40,
     fontFamily: "Roboto Slab",
     fontSize: 18,
     lineHeight: "28px",
     color: "rgb(80, 80, 80)",
-    border: "1px solid #000",
-    backgroundColor: "#F5F5F5",
     boxSizing: "border-box",
   },
 
