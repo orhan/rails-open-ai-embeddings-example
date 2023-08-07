@@ -108,16 +108,21 @@ export const App = (props: AppProps) => {
     })
       .then((responseData) => {
         responseData.json().then((response) => {
-          if (response.redirect) {
-            setTimeout(() => {
-              window.location.href = response.redirect;
-              setAskingQuestion(false);
-            }, 100);
-          } else if (response.url) {
-            setTimeout(() => {
-              window.location.href = response.url;
-              setAskingQuestion(false);
-            }, 100);
+          if (response.ok) {
+            if (response.redirect) {
+              setTimeout(() => {
+                window.location.href = response.redirect;
+                setAskingQuestion(false);
+              }, 100);
+            } else if (response.url) {
+              setTimeout(() => {
+                window.location.href = response.url;
+                setAskingQuestion(false);
+              }, 100);
+            }
+          } else {
+            alert("Error asking question: " + response.statusText);
+            setAskingQuestion(false);
           }
         });
       })
@@ -201,7 +206,7 @@ export const App = (props: AppProps) => {
                 pointerEvents: !askingQuestion ? "all" : "none",
               }}
               hoverStyle={{
-                backgroundColor: "rgb(255, 144, 232)",
+                backgroundColor: "rgb(255, 219, 144)",
                 color: "black",
               }}
               onClick={onAskQuestionClick}
@@ -248,7 +253,7 @@ export const App = (props: AppProps) => {
                 color: "white",
               }}
               hoverStyle={{
-                backgroundColor: "rgb(255, 144, 232)",
+                backgroundColor: "rgb(255, 219, 144)",
                 color: "black",
               }}
               onClick={onAskAnotherQuestionClick}
@@ -369,7 +374,7 @@ const styles: Record<string, CSSProperties> = {
     marginRight: 20,
     padding: 15,
     border: "1px solid rgb(0, 0, 0)",
-    backgroundColor: "rgb(255, 144, 232)",
+    backgroundColor: "rgb(255, 219, 144)",
   },
 
   warning: {

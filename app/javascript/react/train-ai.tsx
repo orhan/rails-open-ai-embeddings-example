@@ -46,6 +46,9 @@ export const TrainAI = (props: AppProps) => {
           bookInfo.current = newBook;
           setNextButtonEnabled(true);
           setShowNewBookForm(false);
+        } else {
+          alert("Error training AI: " + response.statusText);
+          setNextButtonEnabled(true);
         }
       })
       .catch((error) => {
@@ -162,7 +165,7 @@ export const TrainAI = (props: AppProps) => {
                   pointerEvents: nextButtonEnabled ? "all" : "none",
                 }}
                 hoverStyle={{
-                  backgroundColor: "rgb(255, 144, 232)",
+                  backgroundColor: "rgb(255, 219, 144)",
                   color: "black",
                 }}
                 onClick={onNextButtonClick}
@@ -235,7 +238,7 @@ export const TrainAI = (props: AppProps) => {
                         color: "white",
                       }}
                       hoverStyle={{
-                        backgroundColor: "rgb(255, 144, 232)",
+                        backgroundColor: "rgb(255, 219, 144)",
                         color: "black",
                       }}
                       onClick={onGoToAskPageClick}
@@ -277,7 +280,7 @@ export const TrainAI = (props: AppProps) => {
                   <Button
                     style={{ backgroundColor: "#000", color: "white" }}
                     hoverStyle={{
-                      backgroundColor: "rgb(255, 144, 232)",
+                      backgroundColor: "rgb(255, 219, 144)",
                       color: "black",
                     }}
                     onClick={onGenerateEmbeddingsClick}
@@ -396,7 +399,7 @@ const styles: Record<string, CSSProperties> = {
     marginRight: 20,
     padding: 15,
     border: "1px solid rgb(0, 0, 0)",
-    backgroundColor: "rgb(255, 144, 232)",
+    backgroundColor: "rgb(255, 219, 144)",
   },
 
   warning: {
