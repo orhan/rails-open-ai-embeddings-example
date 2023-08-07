@@ -40,7 +40,7 @@ class AskmybookController < ApplicationController
             similarity_array = []
             page_embeddings = {}
             
-            # # Load the embeddings as an object with page number as key and its embeddings as an array
+            # Load the embeddings as an object with page number as key and its embeddings as an array
             CSV.foreach("book_embeddings.csv", headers: false, col_sep: ",") do |row|
                 values = row.to_a
                 
