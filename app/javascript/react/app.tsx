@@ -110,7 +110,6 @@ export const App = (props: AppProps) => {
           if (response.status === "SUCCESS" && response.redirect) {
             setTimeout(() => {
               window.location.href = response.redirect;
-              setAskingQuestion(false);
             }, 100);
           } else {
             if (response.data) {
@@ -118,6 +117,7 @@ export const App = (props: AppProps) => {
             } else {
               alert("Error asking question: " + response.statusText);
             }
+
             setAskingQuestion(false);
           }
         });
